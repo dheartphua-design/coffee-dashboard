@@ -1,0 +1,378 @@
+<title>咖啡店营业看板</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one column dashboard — summary strip, then the item ranking as the main panel, daily trend beside it on wide screens */
+:root {
+  --bg: #f6f4f1;
+  --surface: #ffffff;
+  --fg: #2a211c;
+  --muted: #7a6c63;
+  --line: #e6e0da;
+  --accent: #6b3e26;      /* roasted bean */
+  --accent-soft: #ead9cc;
+  --bar: #a0623d;
+  --warn: #9a5b00;
+  --warn-bg: #fff3dc;
+  --bad: #a3271f;
+  --bad-bg: #fde8e6;
+  --display: "Bricolage Grotesque", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1a1513; --surface: #241d1a; --fg: #f1e9e3; --muted: #a8988d; --line: #3a302b;
+    --accent: #e0a479; --accent-soft: #4a3326; --bar: #d08a5c;
+    --warn: #f0b75a; --warn-bg: #3a2b12; --bad: #ff8f86; --bad-bg: #3d1a17;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1a1513; --surface: #241d1a; --fg: #f1e9e3; --muted: #a8988d; --line: #3a302b;
+  --accent: #e0a479; --accent-soft: #4a3326; --bar: #d08a5c;
+  --warn: #f0b75a; --warn-bg: #3a2b12; --bad: #ff8f86; --bad-bg: #3d1a17;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 48px; display: grid; gap: 24px; }
+
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px; }
+h1 { font-family: var(--display); font-size: 1.9rem; font-weight: 700; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.sub { color: var(--muted); font-size: 0.85rem; margin-top: 4px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); display: inline-block; }
+.dot.live { background: #3f9a5b; }
+
+.periods { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px; }
+.periods button { font: inherit; font-size: 0.88rem; border: 0; background: transparent; color: var(--fg); padding: 6px 14px; border-radius: 999px; cursor: pointer; }
+.periods button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+.periods button:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.notice { border-radius: 10px; padding: 12px 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: space-between; }
+.notice.warn { background: var(--warn-bg); color: var(--warn); }
+.notice.bad { background: var(--bad-bg); color: var(--bad); }
+.btn { font: inherit; font-size: 0.85rem; border: 1px solid currentColor; background: transparent; color: inherit; padding: 5px 12px; border-radius: 6px; cursor: pointer; }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.kpi { background: var(--surface); padding: 18px 20px; }
+.kpi .label { font-size: 0.78rem; color: var(--muted); letter-spacing: 0.04em; }
+.kpi .val { font-family: var(--display); font-size: 2rem; font-weight: 600; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.kpi .val small { font-family: var(--body); font-size: 0.9rem; font-weight: 500; color: var(--muted); margin-right: 4px; }
+.kpi.hero .val { color: var(--accent); }
+
+.grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 820px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; min-width: 0; }
+.panel h2 { font-family: var(--display); font-size: 1.15rem; font-weight: 600; margin: 0 0 4px; }
+.panel .hint { color: var(--muted); font-size: 0.82rem; margin: 0 0 16px; }
+
+.rank { display: grid; gap: 14px; list-style: none; margin: 0; padding: 0; }
+.rank li { display: grid; grid-template-columns: 1.6rem minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; }
+.rank .no { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); grid-row: span 2; align-self: start; padding-top: 2px; }
+.rank li:first-child .no { color: var(--accent); }
+.rank .name { font-weight: 600; overflow-wrap: anywhere; }
+.rank .amt { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.rank .track { grid-column: 2 / 4; height: 10px; background: var(--accent-soft); border-radius: 5px; overflow: hidden; }
+.rank .fill { height: 100%; background: var(--bar); border-radius: 5px; }
+.rank li:first-child .fill { background: var(--accent); }
+.rank .meta { grid-column: 2 / 4; font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: -2px; }
+
+.trend svg { width: 100%; height: auto; display: block; }
+.trend text { fill: var(--muted); font-family: var(--mono); font-size: 10px; }
+.trend .gridline { stroke: var(--line); stroke-width: 1; }
+.trend .b { fill: var(--bar); }
+.trend .b.last { fill: var(--accent); }
+
+.empty { color: var(--muted); padding: 24px 0; text-align: center; }
+footer { color: var(--muted); font-size: 0.8rem; display: flex; flex-wrap: wrap; gap: 6px 16px; }
+footer a { color: var(--accent); }
+.skeleton { background: var(--accent-soft); border-radius: 6px; height: 1em; opacity: .6; }
+@media (prefers-reduced-motion: no-preference) { .fill, .trend .b { transition: width .4s ease, height .4s ease, y .4s ease; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>咖啡店营业看板</h1>
+      <div class="sub"><span class="dot" id="statusDot"></span><span id="statusText">正在连接 Google Sheet…</span></div>
+    </div>
+    <div class="periods" role="group" aria-label="时间范围">
+      <button id="p-today" data-p="today" aria-pressed="false">今天</button>
+      <button id="p-7d" data-p="7d" aria-pressed="false">最近 7 天</button>
+      <button id="p-month" data-p="month" aria-pressed="true">本月</button>
+      <button id="p-all" data-p="all" aria-pressed="false">全部</button>
+    </div>
+  </header>
+
+  <div id="notice" hidden></div>
+
+  <section class="kpis" aria-label="总览">
+    <div class="kpi hero"><div class="label">营业额</div><div class="val" id="kRev"><div class="skeleton" style="width:60%"></div></div></div>
+    <div class="kpi"><div class="label">售出数量</div><div class="val" id="kQty"><div class="skeleton" style="width:40%"></div></div></div>
+    <div class="kpi"><div class="label">平均每天</div><div class="val" id="kAvg"><div class="skeleton" style="width:50%"></div></div></div>
+    <div class="kpi"><div class="label">卖得最好</div><div class="val" id="kTop"><div class="skeleton" style="width:50%"></div></div></div>
+  </section>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>品项排行</h2>
+      <p class="hint">按营业额从高到低。金额 = 数量 × 单价</p>
+      <ol class="rank" id="rank"><li class="empty" style="display:block">读取表格后，这里会列出每个品项卖了多少钱。</li></ol>
+    </section>
+    <section class="panel trend">
+      <h2>每日营业额</h2>
+      <p class="hint" id="trendHint">所选期间内每天的营业额</p>
+      <div id="trend"><div class="empty">暂无数据</div></div>
+    </section>
+  </div>
+
+  <footer>
+    <span>数据来源：<a href="https://docs.google.com/spreadsheets/d/11bOuszgluG7ES3bIe3nOX-i9JdaRP0-YXClrAxPe1EU/edit" target="_blank" rel="noopener">sale record（Sale 工作表）</a></span>
+    <span id="badRows" hidden></span>
+  </footer>
+</div>
+
+<script>
+const FILE_ID = "11bOuszgluG7ES3bIe3nOX-i9JdaRP0-YXClrAxPe1EU";
+const SERVER = "Google Drive";
+const TOOL = "download_file_content";
+const INPUT = { fileId: FILE_ID, exportMimeType: "text/csv" };
+const CUR = "RM";
+
+let rows = [];          // {date:"YYYY-MM-DD", item, qty, price}
+let badCount = 0;
+let hasData = false;
+let period = "month";
+try { const p = localStorage.getItem("period"); if (p) period = p; } catch (e) {}
+
+const $ = (id) => document.getElementById(id);
+const money = (n) => n.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const pad = (n) => String(n).padStart(2, "0");
+const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+/* ---------- parsing ---------- */
+function decodeContent(payload) {
+  if (payload && typeof payload === "object" && typeof payload.content === "string") {
+    const bin = atob(payload.content);
+    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+    return new TextDecoder("utf-8").decode(bytes);
+  }
+  if (typeof payload === "string") return payload;
+  throw new Error("表格内容格式无法识别");
+}
+
+function parseCSV(text) {
+  const out = []; let row = [], cell = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+      else cell += c;
+    } else if (c === '"') q = true;
+    else if (c === ",") { row.push(cell); cell = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      row.push(cell); out.push(row); row = []; cell = "";
+    } else cell += c;
+  }
+  if (cell !== "" || row.length) { row.push(cell); out.push(row); }
+  return out;
+}
+
+const HEADERS = {
+  date: ["timestamp", "date", "日期", "时间"],
+  item: ["item", "product", "品项", "产品", "商品"],
+  qty: ["quantity", "qty", "数量"],
+  price: ["price", "unit price", "单价", "价格"],
+};
+
+function toDate(s) {
+  s = (s || "").trim();
+  let m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if (m) return `${m[1]}-${pad(+m[2])}-${pad(+m[3])}`;
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); // M/D/YYYY (Google Sheets US format)
+  if (m) return `${m[3]}-${pad(+m[1])}-${pad(+m[2])}`;
+  return null;
+}
+const toNum = (s) => { const n = parseFloat(String(s || "").replace(/[^0-9.\-]/g, "")); return Number.isFinite(n) ? n : null; };
+
+function buildRows(text) {
+  const table = parseCSV(text).filter((r) => r.some((c) => c.trim() !== ""));
+  if (!table.length) return { rows: [], bad: 0 };
+  const head = table[0].map((h) => h.trim().toLowerCase());
+  const idx = {};
+  for (const k in HEADERS) idx[k] = head.findIndex((h) => HEADERS[k].includes(h));
+  if (Object.values(idx).some((i) => i < 0)) throw new Error("找不到表头。第一行需要是：Timestamp, Item, Quantity, Price");
+  const res = []; let bad = 0;
+  for (const r of table.slice(1)) {
+    const date = toDate(r[idx.date]), item = (r[idx.item] || "").trim();
+    const qty = toNum(r[idx.qty]), price = toNum(r[idx.price]);
+    if (!date || !item || qty === null || price === null) { bad++; continue; }
+    res.push({ date, item, qty, price });
+  }
+  return { rows: res, bad };
+}
+
+/* ---------- aggregation ---------- */
+function inPeriod(date) {
+  const now = new Date(), today = ymd(now);
+  if (period === "today") return date === today;
+  if (period === "7d") { const s = new Date(now); s.setDate(s.getDate() - 6); return date >= ymd(s) && date <= today; }
+  if (period === "month") return date.slice(0, 7) === today.slice(0, 7);
+  return true;
+}
+
+function render() {
+  document.querySelectorAll(".periods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.p === period)));
+  if (!hasData) return;
+  const sel = rows.filter((r) => inPeriod(r.date));
+  const byItem = new Map(), byDay = new Map();
+  let rev = 0, qty = 0;
+  for (const r of sel) {
+    const amt = r.qty * r.price;
+    rev += amt; qty += r.qty;
+    const it = byItem.get(r.item) || { item: r.item, rev: 0, qty: 0 };
+    it.rev += amt; it.qty += r.qty; byItem.set(r.item, it);
+    byDay.set(r.date, (byDay.get(r.date) || 0) + amt);
+  }
+  const items = [...byItem.values()].sort((a, b) => b.rev - a.rev);
+  const days = byDay.size;
+
+  $("kRev").innerHTML = `<small>${CUR}</small>${money(rev)}`;
+  $("kQty").textContent = qty.toLocaleString();
+  $("kAvg").innerHTML = days ? `<small>${CUR}</small>${money(rev / days)}` : "—";
+  $("kTop").textContent = items[0] ? items[0].item : "—";
+
+  const rank = $("rank");
+  rank.replaceChildren();
+  if (!items.length) {
+    const li = document.createElement("li"); li.className = "empty"; li.style.display = "block";
+    li.textContent = period === "today" ? "今天还没有销售记录。" : "这个期间没有销售记录。";
+    rank.append(li);
+  } else {
+    const max = items[0].rev || 1;
+    items.forEach((it, i) => {
+      const li = document.createElement("li");
+      const share = rev ? (it.rev / rev * 100) : 0;
+      li.innerHTML = `<span class="no">${pad(i + 1)}</span><span class="name"></span><span class="amt">${CUR} ${money(it.rev)}</span>
+        <div class="track"><div class="fill" style="width:${(it.rev / max * 100).toFixed(1)}%"></div></div>
+        <div class="meta">卖出 ${it.qty} 份 · 占 ${share.toFixed(1)}%</div>`;
+      li.querySelector(".name").textContent = it.item;
+      rank.append(li);
+    });
+  }
+  renderTrend(byDay);
+}
+
+function renderTrend(byDay) {
+  const box = $("trend");
+  const entries = [...byDay.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  if (!entries.length) { box.innerHTML = '<div class="empty">暂无数据</div>'; return; }
+  // fill gaps so days with no sales show as zero
+  const filled = []; const d = new Date(entries[0][0] + "T00:00"); const end = entries[entries.length - 1][0];
+  while (ymd(d) <= end && filled.length < 400) { filled.push([ymd(d), byDay.get(ymd(d)) || 0]); d.setDate(d.getDate() + 1); }
+  const W = 420, H = 220, L = 44, R = 8, T = 12, B = 26;
+  const max = Math.max(...filled.map((e) => e[1]));
+  const step = niceStep(max / 4); const top = Math.ceil(max / step) * step || 1;
+  const y = (v) => T + (H - T - B) * (1 - v / top);
+  const bw = (W - L - R) / filled.length;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="每日营业额柱状图">`;
+  for (let v = 0; v <= top + 1e-9; v += step) s += `<line class="gridline" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${v}</text>`;
+  const every = Math.ceil(filled.length / 7);
+  filled.forEach(([date, v], i) => {
+    const x = L + i * bw + bw * 0.15, w = Math.max(bw * 0.7, 1);
+    s += `<rect class="b${i === filled.length - 1 ? " last" : ""}" x="${x}" y="${y(v)}" width="${w}" height="${y(0) - y(v)}" rx="2"><title>${date}：${CUR} ${money(v)}</title></rect>`;
+    if (i % every === 0 || i === filled.length - 1) s += `<text x="${x + w / 2}" y="${H - 8}" text-anchor="middle">${date.slice(5).replace("-", "/")}</text>`;
+  });
+  box.innerHTML = s + "</svg>";
+  $("trendHint").textContent = `单位 ${CUR}，最右边一根是最近一天`;
+}
+function niceStep(raw) {
+  if (raw <= 0) return 1;
+  const p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p;
+}
+
+/* ---------- status & errors ---------- */
+function setStatus(text, live) { $("statusText").textContent = text; $("statusDot").classList.toggle("live", !!live); }
+function notice(kind, msg, action) {
+  const n = $("notice");
+  if (!kind) { n.hidden = true; return; }
+  n.className = "notice " + kind; n.hidden = false; n.replaceChildren();
+  const span = document.createElement("span"); span.textContent = msg; n.append(span);
+  if (action) { const b = document.createElement("button"); b.className = "btn"; b.textContent = action.label; b.onclick = action.run; n.append(b); }
+}
+function clearData() {
+  hasData = false; rows = [];
+  ["kRev", "kQty", "kAvg", "kTop"].forEach((id) => $(id).textContent = "—");
+  $("rank").innerHTML = '<li class="empty" style="display:block">没有权限读取表格时，这里不显示数据。</li>';
+  $("trend").innerHTML = '<div class="empty">暂无数据</div>';
+}
+
+let mcp = null;
+function handleError(err) {
+  const code = err && err.code;
+  switch (code) {
+    case "needs_reauth":
+      clearData(); setStatus("Google Drive 需要重新登录");
+      notice("bad", "Google Drive 的登录已过期。请到 claude.ai 设置 → Connectors 重新连接 Google Drive，然后刷新本页。"); break;
+    case "server_not_connected": case "selection_required": case "server_not_found":
+      clearData(); setStatus("未连接 Google Drive");
+      notice("bad", "没有找到可用的 Google Drive 连接。请到 claude.ai 设置 → Connectors 添加或选择 Google Drive。"); break;
+    case "not_in_manifest": case "blocked_by_policy": case "consent_required":
+      clearData(); setStatus("未允许读取表格");
+      notice("warn", "这个页面还没有被允许读取 Google Drive。打开页面右上角的权限菜单开启后刷新即可。"); break;
+    case "approval_required":
+      setStatus("等待你批准");
+      notice("warn", "读取表格需要你批准一次。", { label: "批准并读取", run: loadOnce }); break;
+    case "tool_error":
+      setStatus(hasData ? "显示的是上次读取的数据" : "读取失败");
+      notice("bad", "Google Drive 返回错误：" + (err.message || "未知错误") + "。请确认表格还在、你仍有权限打开。", { label: "重试", run: refresh }); break;
+    default:
+      setStatus(hasData ? "显示的是上次读取的数据" : "读取失败");
+      notice("bad", "暂时连不上 Google Drive，稍后再试。", { label: "重试", run: refresh });
+  }
+}
+
+function onResult(result) {
+  try {
+    const { rows: r, bad } = buildRows(decodeContent(result.payload));
+    rows = r; badCount = bad; hasData = true;
+    notice(null);
+    const when = result.cache && result.cache.storedAt ? new Date(result.cache.storedAt) : new Date();
+    setStatus(`已同步 · ${when.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })} 更新 · 共 ${rows.length} 笔记录`, true);
+    const br = $("badRows"); br.hidden = !bad; br.textContent = bad ? `有 ${bad} 行格式不对，没有计入（检查日期、数量、单价）` : "";
+    render();
+  } catch (e) {
+    setStatus("表格格式有问题");
+    notice("bad", e.message || "表格内容无法识别");
+  }
+}
+
+async function loadOnce() {
+  try { onResult(await mcp.callTool(SERVER, TOOL, INPUT, { cache: false })); } catch (e) { handleError(e); }
+}
+async function refresh() {
+  notice(null); setStatus("正在重新读取…");
+  try { await mcp.invalidate(SERVER, TOOL, INPUT); } catch (e) { loadOnce(); }
+}
+
+document.querySelectorAll(".periods button").forEach((b) => b.addEventListener("click", () => {
+  period = b.dataset.p; try { localStorage.setItem("period", period); } catch (e) {}
+  render();
+}));
+render();
+
+(async () => {
+  mcp = window.claude && window.claude.use ? await window.claude.use("mcp") : null;
+  if (!mcp) {
+    clearData(); setStatus("无法读取表格");
+    notice("warn", "这个页面需要在 claude.ai 里打开，并连接 Google Drive，才能读取销售表格。");
+    return;
+  }
+  mcp.watchTool(SERVER, TOOL, INPUT, (ev) => {
+    if (ev.type === "data") onResult(ev.result); else handleError(ev.error);
+  }, { cache: { staleTime: 30000 }, refetchInterval: 60000 });
+})();
+</script>
